@@ -1,0 +1,24 @@
+- name: Setup Server
+  # apply this to all host
+  hosts: all
+  become: yes  # Run tasks with sudo
+  tasks:
+    - name: Install {{item.name}}
+      apt:
+        update_cache: yes
+        name: "{{item.key}}"
+        state: "{{item.value}}"
+      loop: "{{packages_to_install | dict2items}}"
+    - name: Add HTML content to /var/www/html
+      unarchive:
+        src: assets.zip
+        dest: /var/www/html
+    - name: Start nginx
+      systemd_service:
+        name: nginx
+        daemon_reload: true
+        enabled: true
+        state: started
+    - name: Allow 'Nginx Full' in UFW
+      command:
+        cmd: ufw allow 'Nginx Full'

@@ -1,0 +1,14 @@
+all:
+  vars:
+    ansible_user: root
+    ansible_connection: ssh
+    ansible_ssh_private_key_file: ${private_key_path}
+  hosts:
+    vultr_server:
+      packages_to_install:
+        nginx: present
+        zip: present
+      code_server_domain: code-${instance_ip}.nip.io
+      code_server_password: ${code_server_password}
+      code_server_binary_url: ${code_server_binary_url}
+      ansible_host: ${instance_ip}

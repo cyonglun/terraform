@@ -1,0 +1,15 @@
+- name: Test connectivity
+  # Ping all hosts in inventory
+  hosts: all
+  tasks: 
+  - name: Ping the host
+    ping:
+  - name: Echo a message
+    debug:
+      msg: "User running this task {{ ansible_user }}, IP address is {{ ansible_host }}"
+  - name: Run date command
+    shell: "date '+%Y-%m-%d %H:%M:%S'"
+    register: current_time
+  - name: Print the date/time
+    debug:
+      msg: "Server time is: {{ current_time.stdout }}"

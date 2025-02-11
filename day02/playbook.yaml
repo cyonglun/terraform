@@ -1,0 +1,26 @@
+- name: Setup Server
+  # apply this to all host
+  hosts: all
+  tasks:
+  - name: Check if assets exist in /tmp
+    stat:
+      path: /tmp/assets.zip
+    register: f
+  - name: Display if assets exist in /tmp before copy
+    debug:
+      msg: "Assets exists: {{f.stat.exists}}"
+  - name: Upload assets to /tmp
+    copy:
+      src: assets.zip
+      dest: /tmp
+    when: not f.stat.exists
+    register: copy_f
+  - name: Display results of copying assets to /tmp
+    debug:
+      msg: "Copy Result: {{copy_f}}"
+  - name: Generate report of installed packages
+    template:
+      src: packages_installed.txt.j2
+      # dest: /tmp/packages_installed.txt
+      dest: /Users/yonglunchua/Desktop/Course/Automating_Infrastructure_Provisioning_and_Configuration/day02/packages_installed.txt
+    delegate_to: localhost

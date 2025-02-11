@@ -1,0 +1,85 @@
+- name: Setup Server
+  # apply to all hosts
+  hosts: all
+  vars:
+    opt_dir: "/usr/local/opt"
+  tasks:
+  - name: "Install packages"
+    apt:
+      update_cache: yes
+      name: "{{ item.key }}"
+      state: "{{ item.value }}"
+    loop: "{{ packages_to_install | dict2items }}"
+  - name: Ensure directories exist
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: '0755'
+    loop:
+      - "/var/lib/code-server"  
+      - "{{ opt_dir }}"
+  - name: Download code-server binary
+    uri:
+      url: "{{ code_server_binary_url }}"
+      method: GET
+      return_content: yes
+      dest: "/tmp/code-server-4.96.4-linux-amd64.tar.gz"
+      mode: "0644"
+      status_code: [200, 302, 304]
+  - name: Unzip code-server
+    unarchive:
+      src: /tmp/code-server-4.96.4-linux-amd64.tar.gz
+      dest: "{{ opt_dir }}"
+      remote_src: true
+      list_files: true
+    register: code_server_folder
+  - name: Create symbolic links
+    file:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      state: "{{ item.state }}"
+    loop:
+    - src: "{{ opt_dir }}/{{ code_server_folder.files[0] }}"
+      dest: "/usr/lib/code-server"
+      state: link
+    - src: "{{ opt_dir }}/{{ code_server_folder.files[0] }}/bin/code-server"
+      dest: "/usr/bin/code-server"
+      state: link
+  - name: Generate & upload code-server.service file
+    template:
+      src: code-server.service.j2
+      dest: /lib/systemd/system/code-server.service
+  - name: Start code-server
+    systemd_service:
+      name: code-server
+      daemon_reload: true
+      enabled: true
+      state: started
+    register: code_server_status
+  - name: Display code-server result
+    debug:
+      var: code_server_status
+ 
+  # Nginx Setup
+  - name: Generate & upload code-server.conf file
+    template:
+      src: code-server.conf.j2
+      dest: /etc/nginx/sites-available/code-server.conf
+  - name: Create /etc/nginx/sites-available/code-server.conf -> /etc/nginx/sites-enabled/code-server.conf
+    file:
+      src: "/etc/nginx/sites-available/code-server.conf"
+      dest: "/etc/nginx/sites-enabled/code-server.conf"
+      state: "link"
+  - name: Start nginx
+    systemd_service:
+      name: nginx
+      daemon_reload: true
+      enabled: true
+      state: restarted
+    register: nginx_status
+  - name: Display nginx result
+    debug:
+      var: nginx_status
+  - name: Allow 'Nginx Full' in UFW
+    command:
+      cmd: ufw allow 'Nginx Full'
