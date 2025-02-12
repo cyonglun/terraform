@@ -26,3 +26,6 @@ terraform.rc
 .terraform/providers/
 
 *.tfvars
+
+# VS Code
+.vscode/

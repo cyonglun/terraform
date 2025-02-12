@@ -1,0 +1,76 @@
+- name: Setup Server
+  # apply to all hosts
+  hosts: all
+  vars:
+    opt_dir: "/usr/local/opt"
+    packages_to_install:
+      nginx: present
+      zip: present
+  tasks:
+  - name: "Install packages"
+    apt:
+      update_cache: yes
+      name: "{{ item.key }}"
+      state: "{{ item.value }}"
+    loop: "{{ packages_to_install | dict2items }}"
+  - name: Ensure directories exist
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: '0755'
+    loop:
+      - "/var/lib/code-server"  
+      - "{{ opt_dir }}"
+  - name: Download code-server binary
+    get_url:
+      url: "{{ code_server_binary_url }}"
+      dest: "/tmp/{{ code_server_binary_folder }}"
+  - name: Unzip code-server
+    unarchive:
+      src: "/tmp/{{ code_server_binary_folder }}"
+      dest: "{{ opt_dir }}"
+      remote_src: true
+      list_files: true
+    register: code_server_folder
+  - name: Create symbolic links
+    file:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      state: "{{ item.state }}"
+    loop:
+    - src: "{{ opt_dir }}/{{ code_server_folder.files[0] }}"
+      dest: "/usr/lib/code-server"
+      state: link
+    - src: "{{ opt_dir }}/{{ code_server_folder.files[0] }}/bin/code-server"
+      dest: "/usr/bin/code-server"
+      state: link
+  - name: Upload code-server.service file
+    copy:
+      src: code-server.service
+      dest: /lib/systemd/system/code-server.service
+  - name: Start code-server
+    systemd_service:
+      name: code-server
+      daemon_reload: true
+      enabled: true
+      state: started
+ 
+  # Nginx Setup
+  - name: Upload code-server.conf file
+    copy:
+      src: code-server.conf
+      dest: /etc/nginx/sites-available/code-server.conf
+  - name: Create /etc/nginx/sites-available/code-server.conf -> /etc/nginx/sites-enabled/code-server.conf
+    file:
+      src: "/etc/nginx/sites-available/code-server.conf"
+      dest: "/etc/nginx/sites-enabled/code-server.conf"
+      state: "link"
+  - name: Start nginx
+    systemd_service:
+      name: nginx
+      daemon_reload: true
+      enabled: true
+      state: restarted
+  - name: Allow 'Nginx Full' in UFW
+    command:
+      cmd: ufw allow 'Nginx Full'

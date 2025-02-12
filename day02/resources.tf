@@ -9,9 +9,9 @@ resource "vultr_instance" "vultr_instance" {
   plan                = var.vultr_plan
   region              = var.vultr_region
   os_id               = var.os_id
-  label               = "day-01-terraform"
-  tags                = ["day-01-terraform"]
-  hostname            = "day-01-terraform"
+  label               = "day-02-terraform"
+  tags                = ["day-02-terraform"]
+  hostname            = "day-02-terraform"
   enable_ipv6         = false
   disable_public_ipv4 = false
   backups             = "disabled"
